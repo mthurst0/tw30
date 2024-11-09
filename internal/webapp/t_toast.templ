@@ -1,0 +1,14 @@
+package webapp
+
+templ toastPage(appName string) {
+<!DOCTYPE html>
+<html lang="en">
+@headerFragment(appName, "Toast")
+<body>
+    @navBarFragment(nil)
+    <div class="container">
+        <h2>Toast</h2>
+    </div>
+</body>
+</html>
+}

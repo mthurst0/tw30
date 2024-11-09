@@ -1,0 +1,35 @@
+package webapp
+
+templ unauthorizedPage(appName string, errMsg string) {
+<!DOCTYPE html>
+<html lang="en">
+@headerFragment(appName, "Unauthorized")
+<body>
+    @navBarFragment(nil)
+    <div class="error-container">
+      <h2>Error Occurred</h2>
+      <p>{ errMsg }</p>
+      <a href="/login">Return to Login</a>
+    </div>
+</body>
+</html>
+}
+
+templ errorPage(
+    appName string,
+    errMsg string,
+    navText string,
+    navURL templ.SafeURL) {
+<!DOCTYPE html>
+<html lang="en">
+@headerFragment(appName, "Error")
+<body>
+    @navBarFragment(nil)
+    <div class="error-container">
+        <h2>Error Occurred</h2>
+        <p>{ errMsg }</p>
+        <a href={ navURL } >{ navText }</a>
+    </div>
+</body>
+</html>
+}

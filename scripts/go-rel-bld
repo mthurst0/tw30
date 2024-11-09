@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+set -x
+
+go get -v
+
+go generate ./...
+templ generate
+
+goimports -w .
+
+go fmt ./...
+
+if ! git diff --exit-code;
+then
+    echo "Generated code is out of sync"
+    exit 1
+fi
+
+if [[ "${TW30_SKIP_TESTS:-}" == "" ]];
+then
+    go test -v ./...
+fi
+
+go vet -v ./...
+
+MAIN_PKG='main'
+BUILD_TIME=$(date +"%Y%m%d.%H%M%S")
+CommitHash=N/A
+GoVersion=N/A
+GitTag=N/A
+
+if [[ $(go version) =~ [0-9]+\.[0-9]+\.[0-9]+ ]];
+then
+    GoVersion=${BASH_REMATCH[0]}
+fi
+
+GV=$(git tag || echo 'N/A')
+if [[ $GV =~ [^[:space:]]+ ]];
+then
+    GitTag=${BASH_REMATCH[0]}
+fi
+
+GH=$(git log -1 --pretty=format:%h || echo 'N/A')
+if [[ GH =~ 'fatal' ]];
+then
+    CommitHash=N/A
+else
+    CommitHash=$GH
+fi
+
+FLAG="-X $MAIN_PKG.BuildTime=$BUILD_TIME"
+FLAG="$FLAG -X $MAIN_PKG.CommitHash=$CommitHash"
+FLAG="$FLAG -X $MAIN_PKG.GoVersion=$GoVersion"
+FLAG="$FLAG -X $MAIN_PKG.GitTag=$GitTag"
+
+export CGO_ENABLED=0
+export GOOS=linux
+export GOARCH=amd64
+export GIN_MODE=release
+
+go build \
+  -v \
+  -ldflags "$FLAG -w -s -extldflags '-static'" \
+  -o ./tw30.$GOOS.$GOARCH

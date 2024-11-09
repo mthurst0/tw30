@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+set -x
+
+go generate ./...
+templ generate
+
+go get -v
+
+goimports -w .
+
+go fmt ./...
+
+if [[ "${TW30_SKIP_TESTS:-}" == "" ]];
+then
+    go test -v ./...
+fi
+
+go vet -v ./...
+go mod tidy
+
+MAIN_PKG='main'
+BUILD_TIME=$(date +"%Y%m%d.%H%M%S")
+CommitHash=N/A
+GoVersion=N/A
+GitTag=N/A
+
+if [[ $(go version) =~ [0-9]+\.[0-9]+\.[0-9]+ ]];
+then
+    GoVersion=${BASH_REMATCH[0]}
+fi
+
+GV=$(git tag || echo 'N/A')
+if [[ $GV =~ [^[:space:]]+ ]];
+then
+    GitTag=${BASH_REMATCH[0]}
+fi
+
+GH=$(git log -1 --pretty=format:%h || echo 'N/A')
+if [[ GH =~ 'fatal' ]];
+then
+    CommitHash=N/A
+else
+    CommitHash=$GH
+fi
+
+FLAG="-X $MAIN_PKG.BuildTime=$BUILD_TIME"
+FLAG="$FLAG -X $MAIN_PKG.CommitHash=$CommitHash"
+FLAG="$FLAG -X $MAIN_PKG.GoVersion=$GoVersion"
+FLAG="$FLAG -X $MAIN_PKG.GitTag=$GitTag"
+
+if [[ "${1:-}" == "install" ]];
+then
+    go install -v -ldflags "$FLAG"
+else
+    go build -v -ldflags "$FLAG"
+fi
